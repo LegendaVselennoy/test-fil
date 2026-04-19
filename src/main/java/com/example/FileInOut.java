@@ -3,34 +3,47 @@ package com.example;
 import java.io.BufferedInputStream;
 import java.io.BufferedWriter;
 import java.io.FileInputStream;
-import java.io.FileWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.PrintWriter;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.zip.GZIPInputStream;
 
 public class FileInOut {
 
-    public void writeOutput(String path, List<String> lines, List<List<Integer>> groups) {
-        try (PrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter(path)))) {
-            long multiGroups = groups.stream().filter(g -> g.size() > 1).count();
-            writer.println("Количество групп с более чем одним элементом: " + multiGroups);
+    public void writeOutput(String outFile,
+                            List<String[]> rows,
+                            List<List<Integer>> sortedGroups,
+                            long multiGroupCount) {
+        try (BufferedWriter writer = new BufferedWriter(
+                new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8), 1 << 16)) {
 
-            int count = 1;
-            for (List<Integer> group : groups) {
-                writer.println("Группа " + count++);
+            writer.write("Групп с более чем одним элементом: " + multiGroupCount);
+            writer.newLine();
+            writer.newLine();
+
+            int groupNum = 1;
+            for (List<Integer> group : sortedGroups) {
+                writer.write("Группа " + groupNum++);
+                writer.newLine();
                 for (int idx : group) {
-                    writer.println(lines.get(idx));
+                    writer.write(String.join(";", rows.get(idx)));
+                    writer.newLine();
                 }
+                writer.newLine();
             }
         } catch (IOException e) {
-            System.out.println("Ошибка вывода "  + e.getMessage());
+            System.out.println("Error writing output file: " + outFile);
         }
     }
 
     public InputStream openStream(String path) throws IOException {
-        InputStream fis = new FileInputStream(path);
-        return path.endsWith(".gz") ? new GZIPInputStream(fis) : new BufferedInputStream(fis);
+        InputStream fis = new BufferedInputStream(new FileInputStream(path), 1 << 16);
+        if (path.endsWith(".gz")) {
+            return new GZIPInputStream(fis, 1 << 16);
+        }
+        return fis;
     }
 }
